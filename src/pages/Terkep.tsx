@@ -19,12 +19,12 @@ export default function Terkep() {
     const result: Record<string, { count: number; osszeg: number }> = {};
     
     filteredProjects.forEach(project => {
-      const city = project.varos;
+      const city = project.szekhely_varos;
       if (!result[city]) {
         result[city] = { count: 0, osszeg: 0 };
       }
       result[city].count++;
-      result[city].osszeg += project.tamogatott_osszeg;
+      result[city].osszeg += project.tamogatas;
     });
     
     return result;

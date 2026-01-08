@@ -4,10 +4,10 @@ import { loadParquetData } from '@/lib/parquetLoader';
 
 const defaultFilters: FilterState = {
   searchQuery: '',
-  statusz: [],
-  megye: [],
-  ev: [],
-  kategoria: [],
+  dontes: [],
+  varos: [],
+  besorolas: [],
+  szervezet_tipusa: [],
   minOsszeg: 0,
   maxOsszeg: Infinity,
 };
@@ -32,15 +32,16 @@ export function useProjectData() {
 
   const filteredProjects = useMemo(() => {
     return projects.filter(project => {
-      // Search query
+      // Search query - search by name, organization+tax number, city, id
       if (filters.searchQuery) {
         const query = filters.searchQuery.toLowerCase();
         const searchFields = [
-          project.palyazat_nev,
-          project.szervezet_nev,
-          project.varos,
-          project.megye,
-          project.id,
+          project.palyazat_targya,
+          project.szervezet_neve,
+          project.adoszama,
+          project.szekhely_varos,
+          project.azonosito,
+          project.besorolas,
         ].map(f => f?.toLowerCase() || '');
         
         if (!searchFields.some(f => f.includes(query))) {
@@ -48,31 +49,31 @@ export function useProjectData() {
         }
       }
 
-      // Status filter
-      if (filters.statusz.length > 0 && !filters.statusz.includes(project.statusz)) {
+      // Decision filter
+      if (filters.dontes.length > 0 && !filters.dontes.includes(project.palyazati_dontes)) {
         return false;
       }
 
-      // County filter
-      if (filters.megye.length > 0 && !filters.megye.includes(project.megye)) {
+      // City filter
+      if (filters.varos.length > 0 && !filters.varos.includes(project.szekhely_varos)) {
         return false;
       }
 
-      // Year filter
-      if (filters.ev.length > 0 && !filters.ev.includes(project.ev)) {
+      // Classification filter
+      if (filters.besorolas.length > 0 && !filters.besorolas.includes(project.besorolas)) {
         return false;
       }
 
-      // Category filter
-      if (filters.kategoria.length > 0 && !filters.kategoria.includes(project.kategoria)) {
+      // Organization type filter
+      if (filters.szervezet_tipusa.length > 0 && !filters.szervezet_tipusa.includes(project.szervezet_tipusa)) {
         return false;
       }
 
       // Amount range
-      if (project.tamogatott_osszeg < filters.minOsszeg) {
+      if (project.tamogatas < filters.minOsszeg) {
         return false;
       }
-      if (filters.maxOsszeg !== Infinity && project.tamogatott_osszeg > filters.maxOsszeg) {
+      if (filters.maxOsszeg !== Infinity && project.tamogatas > filters.maxOsszeg) {
         return false;
       }
 
@@ -82,61 +83,58 @@ export function useProjectData() {
 
   const aggregatedData: AggregatedData = useMemo(() => {
     const data: AggregatedData = {
-      osszesIgenyelt: 0,
-      osszesTamogatott: 0,
+      osszesTamogatas: 0,
       projektekSzama: filteredProjects.length,
       atlagTamogatas: 0,
-      megyenkent: {},
-      evenkent: {},
-      kategoriaként: {},
-      statuszokSzerint: {},
+      varosokSzerint: {},
+      besorolasSzerint: {},
+      dontesSzerint: {},
+      szervezetTipusSzerint: {},
     };
 
     filteredProjects.forEach(project => {
-      data.osszesIgenyelt += project.igenyelt_osszeg;
-      data.osszesTamogatott += project.tamogatott_osszeg;
+      data.osszesTamogatas += project.tamogatas;
 
-      // By county
-      if (!data.megyenkent[project.megye]) {
-        data.megyenkent[project.megye] = { count: 0, osszeg: 0 };
+      // By city
+      if (!data.varosokSzerint[project.szekhely_varos]) {
+        data.varosokSzerint[project.szekhely_varos] = { count: 0, osszeg: 0 };
       }
-      data.megyenkent[project.megye].count++;
-      data.megyenkent[project.megye].osszeg += project.tamogatott_osszeg;
+      data.varosokSzerint[project.szekhely_varos].count++;
+      data.varosokSzerint[project.szekhely_varos].osszeg += project.tamogatas;
 
-      // By year
-      if (!data.evenkent[project.ev]) {
-        data.evenkent[project.ev] = { count: 0, osszeg: 0 };
+      // By classification
+      if (!data.besorolasSzerint[project.besorolas]) {
+        data.besorolasSzerint[project.besorolas] = { count: 0, osszeg: 0 };
       }
-      data.evenkent[project.ev].count++;
-      data.evenkent[project.ev].osszeg += project.tamogatott_osszeg;
+      data.besorolasSzerint[project.besorolas].count++;
+      data.besorolasSzerint[project.besorolas].osszeg += project.tamogatas;
 
-      // By category
-      if (!data.kategoriaként[project.kategoria]) {
-        data.kategoriaként[project.kategoria] = { count: 0, osszeg: 0 };
+      // By decision
+      if (!data.dontesSzerint[project.palyazati_dontes]) {
+        data.dontesSzerint[project.palyazati_dontes] = 0;
       }
-      data.kategoriaként[project.kategoria].count++;
-      data.kategoriaként[project.kategoria].osszeg += project.tamogatott_osszeg;
+      data.dontesSzerint[project.palyazati_dontes]++;
 
-      // By status
-      if (!data.statuszokSzerint[project.statusz]) {
-        data.statuszokSzerint[project.statusz] = 0;
+      // By organization type
+      if (!data.szervezetTipusSzerint[project.szervezet_tipusa]) {
+        data.szervezetTipusSzerint[project.szervezet_tipusa] = { count: 0, osszeg: 0 };
       }
-      data.statuszokSzerint[project.statusz]++;
+      data.szervezetTipusSzerint[project.szervezet_tipusa].count++;
+      data.szervezetTipusSzerint[project.szervezet_tipusa].osszeg += project.tamogatas;
     });
 
     data.atlagTamogatas = data.projektekSzama > 0 
-      ? data.osszesTamogatott / data.projektekSzama 
+      ? data.osszesTamogatas / data.projektekSzama 
       : 0;
 
     return data;
   }, [filteredProjects]);
 
   const uniqueValues = useMemo(() => ({
-    megyék: [...new Set(projects.map(p => p.megye))].filter(Boolean).sort(),
-    évek: [...new Set(projects.map(p => p.ev))].sort((a, b) => b - a),
-    kategoriák: [...new Set(projects.map(p => p.kategoria))].filter(Boolean).sort(),
-    statuszok: [...new Set(projects.map(p => p.statusz))].filter(Boolean),
-    városok: [...new Set(projects.map(p => p.varos))].filter(Boolean).sort(),
+    varosok: [...new Set(projects.map(p => p.szekhely_varos))].filter(Boolean).sort(),
+    besorolasok: [...new Set(projects.map(p => p.besorolas))].filter(Boolean).sort(),
+    dontesek: [...new Set(projects.map(p => p.palyazati_dontes))].filter(Boolean).sort(),
+    szervezetTipusok: [...new Set(projects.map(p => p.szervezet_tipusa))].filter(Boolean).sort(),
   }), [projects]);
 
   const updateFilter = <K extends keyof FilterState>(key: K, value: FilterState[K]) => {

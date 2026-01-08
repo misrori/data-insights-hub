@@ -16,7 +16,9 @@ export default function Nyertes() {
   } = useProjectData();
 
   const nyertesProjects = useMemo(() => 
-    filteredProjects.filter(p => p.statusz === 'nyertes'),
+    filteredProjects.filter(p => 
+      p.palyazati_dontes.toLowerCase() === 'nyertes'
+    ),
     [filteredProjects]
   );
 
@@ -38,9 +40,9 @@ export default function Nyertes() {
             <Trophy className="h-6 w-6 text-success" />
           </div>
           <div>
-            <h1 className="font-display text-2xl font-bold">Nyertes projektek</h1>
+            <h1 className="font-display text-2xl font-bold">Nyertes pályázatok</h1>
             <p className="text-muted-foreground">
-              {nyertesProjects.length.toLocaleString('hu-HU')} nyertes projekt
+              {nyertesProjects.length.toLocaleString('hu-HU')} nyertes pályázat
             </p>
           </div>
         </div>

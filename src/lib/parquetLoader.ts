@@ -11,6 +11,28 @@ async function initParquetWasm() {
   }
 }
 
+function parseHungarianNumber(value: any): number {
+  if (typeof value === 'number') return value;
+  if (!value) return 0;
+  // Remove spaces and convert to number (Hungarian format: "2 886 200")
+  const cleaned = String(value).replace(/\s/g, '').replace(/,/g, '.');
+  return parseFloat(cleaned) || 0;
+}
+
+function normalizeStatus(raw: string | undefined): string {
+  if (!raw) return 'Ismeretlen';
+  const lower = raw.toLowerCase().trim();
+  
+  if (lower === 'nyertes') return 'Nyertes';
+  if (lower === 'nem támogatott') return 'Nem támogatott';
+  if (lower === 'elutasított') return 'Elutasított';
+  if (lower === 'érvénytelen') return 'Érvénytelen';
+  if (lower === 'várólistás') return 'Várólistás';
+  
+  // Capitalize first letter
+  return raw.charAt(0).toUpperCase() + raw.slice(1).toLowerCase();
+}
+
 export async function loadParquetData(): Promise<Project[]> {
   try {
     await initParquetWasm();
@@ -27,6 +49,9 @@ export async function loadParquetData(): Promise<Project[]> {
     const ipcStream = wasmTable.intoIPCStream();
     const table = arrow.tableFromIPC(ipcStream);
     
+    console.log('Parquet schema fields:', table.schema.fields.map(f => f.name));
+    console.log('Total rows in parquet:', table.numRows);
+    
     const projects: Project[] = [];
     
     for (let i = 0; i < table.numRows; i++) {
@@ -40,79 +65,25 @@ export async function loadParquetData(): Promise<Project[]> {
       }
       
       projects.push({
-        id: row.id?.toString() || `proj-${i}`,
-        palyazat_nev: row.palyazat_nev || row.projekt_nev || row.nev || 'N/A',
-        szervezet_nev: row.szervezet_nev || row.szervezet || 'N/A',
-        varos: row.varos || row.telepules || 'N/A',
-        megye: row.megye || 'N/A',
-        regio: row.regio || 'N/A',
-        kisterseg: row.kisterseg || 'N/A',
-        igenyelt_osszeg: Number(row.igenyelt_osszeg) || Number(row.igenyelt) || 0,
-        tamogatott_osszeg: Number(row.tamogatott_osszeg) || Number(row.tamogatott) || 0,
-        onresz: Number(row.onresz) || 0,
-        statusz: mapStatusz(row.statusz || row.eredmeny || row.status),
-        kollaciok: row.kollaciok || row.kollacio || '',
-        ev: Number(row.ev) || new Date().getFullYear(),
-        datum: row.datum || '',
-        kategoria: row.kategoria || 'Egyéb',
-        alkategoria: row.alkategoria || '',
-        leiras: row.leiras || row.description || '',
+        azonosito: row.azonosito?.toString() || `proj-${i}`,
+        szervezet_neve: row.szervezet_neve?.toString() || 'N/A',
+        adoszama: row.adoszama?.toString() || 'N/A',
+        besorolas: row.besorolas?.toString() || 'Egyéb',
+        szekhely_varos: row.szekhely_varos?.toString() || 'N/A',
+        szekhely_orszag: row.szekhely_orszag?.toString() || 'Magyarország',
+        szervezet_tipusa: row.szervezet_tipusa?.toString() || 'N/A',
+        tamogatas: parseHungarianNumber(row.tamogatas),
+        palyazati_dontes: normalizeStatus(row.palyazati_dontes?.toString()),
+        palyazat_targya: row.palyazat_targya?.toString() || '',
       });
     }
     
+    console.log('Loaded projects:', projects.length);
     return projects;
   } catch (error) {
     console.error('Error loading parquet data:', error);
-    // Return mock data for development/demo
-    return generateMockData();
+    throw error;
   }
-}
-
-function mapStatusz(raw: string | undefined): Project['statusz'] {
-  if (!raw) return 'támogatott';
-  const lower = raw.toLowerCase();
-  if (lower.includes('kizár') || lower.includes('elutasít')) return 'kizárt';
-  if (lower.includes('nyer')) return 'nyertes';
-  if (lower.includes('támogat')) return 'támogatott';
-  return 'támogatott';
-}
-
-function generateMockData(): Project[] {
-  const megyék = ['Budapest', 'Pest', 'Bács-Kiskun', 'Baranya', 'Békés', 'Borsod-Abaúj-Zemplén', 'Csongrád-Csanád', 'Fejér', 'Győr-Moson-Sopron', 'Hajdú-Bihar'];
-  const régiók = ['Közép-Magyarország', 'Dél-Alföld', 'Észak-Alföld', 'Dél-Dunántúl', 'Nyugat-Dunántúl', 'Közép-Dunántúl', 'Észak-Magyarország'];
-  const kategoriák = ['Civil szervezetek', 'Kulturális', 'Sport', 'Szociális', 'Oktatási', 'Környezetvédelmi', 'Egészségügyi'];
-  const statuszok: Project['statusz'][] = ['támogatott', 'nyertes', 'kizárt'];
-  const városok = ['Budapest', 'Debrecen', 'Szeged', 'Pécs', 'Győr', 'Miskolc', 'Nyíregyháza', 'Kecskemét', 'Székesfehérvár', 'Szombathely'];
-
-  const projects: Project[] = [];
-  
-  for (let i = 0; i < 500; i++) {
-    const igenyelt = Math.floor(Math.random() * 50000000) + 500000;
-    const statusz = statuszok[Math.floor(Math.random() * statuszok.length)];
-    const tamogatott = statusz === 'kizárt' ? 0 : Math.floor(igenyelt * (0.5 + Math.random() * 0.5));
-    
-    projects.push({
-      id: `NEA-${2020 + Math.floor(i / 100)}-${String(i).padStart(5, '0')}`,
-      palyazat_nev: `${kategoriák[Math.floor(Math.random() * kategoriák.length)]} pályázat ${i + 1}`,
-      szervezet_nev: `Szervezet ${i + 1} Egyesület`,
-      varos: városok[Math.floor(Math.random() * városok.length)],
-      megye: megyék[Math.floor(Math.random() * megyék.length)],
-      regio: régiók[Math.floor(Math.random() * régiók.length)],
-      kisterseg: 'N/A',
-      igenyelt_osszeg: igenyelt,
-      tamogatott_osszeg: tamogatott,
-      onresz: Math.floor(igenyelt * 0.1),
-      statusz,
-      kollaciok: '',
-      ev: 2020 + Math.floor(i / 100),
-      datum: `${2020 + Math.floor(i / 100)}-${String(Math.floor(Math.random() * 12) + 1).padStart(2, '0')}-${String(Math.floor(Math.random() * 28) + 1).padStart(2, '0')}`,
-      kategoria: kategoriák[Math.floor(Math.random() * kategoriák.length)],
-      alkategoria: '',
-      leiras: 'A projekt célja a helyi közösség támogatása és fejlesztése.',
-    });
-  }
-  
-  return projects;
 }
 
 export async function loadGeoJsonData() {

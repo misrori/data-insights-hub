@@ -10,36 +10,32 @@ export default function Letoltes() {
 
   const hasActiveFilters = 
     filters.searchQuery ||
-    filters.statusz.length > 0 ||
-    filters.megye.length > 0 ||
-    filters.ev.length > 0 ||
-    filters.kategoria.length > 0;
+    filters.dontes.length > 0 ||
+    filters.varos.length > 0 ||
+    filters.besorolas.length > 0 ||
+    filters.szervezet_tipusa.length > 0;
 
   const downloadCSV = async (data: typeof projects, filename: string) => {
     setDownloading(filename);
     
-    await new Promise(resolve => setTimeout(resolve, 500)); // Simulate processing
+    await new Promise(resolve => setTimeout(resolve, 500));
 
     const headers = [
-      'ID', 'Pályázat neve', 'Szervezet', 'Város', 'Megye', 'Régió',
-      'Igényelt összeg', 'Támogatott összeg', 'Önrész', 'Státusz',
-      'Év', 'Kategória', 'Leírás'
+      'Azonosító', 'Szervezet neve', 'Adószám', 'Besorolás', 'Székhely város',
+      'Székhely ország', 'Szervezet típusa', 'Támogatás', 'Pályázati döntés', 'Pályázat tárgya'
     ];
 
     const rows = data.map(p => [
-      p.id,
-      `"${p.palyazat_nev.replace(/"/g, '""')}"`,
-      `"${p.szervezet_nev.replace(/"/g, '""')}"`,
-      p.varos,
-      p.megye,
-      p.regio,
-      p.igenyelt_osszeg,
-      p.tamogatott_osszeg,
-      p.onresz,
-      p.statusz,
-      p.ev,
-      p.kategoria,
-      `"${(p.leiras || '').replace(/"/g, '""')}"`
+      p.azonosito,
+      `"${(p.szervezet_neve || '').replace(/"/g, '""')}"`,
+      p.adoszama,
+      `"${(p.besorolas || '').replace(/"/g, '""')}"`,
+      p.szekhely_varos,
+      p.szekhely_orszag,
+      `"${(p.szervezet_tipusa || '').replace(/"/g, '""')}"`,
+      p.tamogatas,
+      p.palyazati_dontes,
+      `"${(p.palyazat_targya || '').replace(/"/g, '""')}"`
     ].join(','));
 
     const csvContent = [headers.join(','), ...rows].join('\n');
@@ -86,38 +82,37 @@ export default function Letoltes() {
   const downloadOptions = [
     {
       title: 'Összes adat',
-      description: 'Az összes projekt exportálása szűrés nélkül',
+      description: 'Az összes pályázat exportálása szűrés nélkül',
       count: projects.length,
       getData: () => projects,
-      filename: 'nea-osszes-projekt',
+      filename: 'nea-osszes-palyazat',
     },
     ...(hasActiveFilters ? [{
       title: 'Szűrt adatok',
-      description: 'A jelenlegi szűrésnek megfelelő projektek',
+      description: 'A jelenlegi szűrésnek megfelelő pályázatok',
       count: filteredProjects.length,
       getData: () => filteredProjects,
-      filename: 'nea-szurt-projektek',
+      filename: 'nea-szurt-palyazatok',
     }] : []),
     {
-      title: 'Nyertes projektek',
-      description: 'Csak a nyertes státuszú projektek',
-      count: projects.filter(p => p.statusz === 'nyertes').length,
-      getData: () => projects.filter(p => p.statusz === 'nyertes'),
-      filename: 'nea-nyertes-projektek',
+      title: 'Nyertes pályázatok',
+      description: 'Csak a nyertes döntésű pályázatok',
+      count: projects.filter(p => p.palyazati_dontes.toLowerCase() === 'nyertes').length,
+      getData: () => projects.filter(p => p.palyazati_dontes.toLowerCase() === 'nyertes'),
+      filename: 'nea-nyertes-palyazatok',
     },
     {
-      title: 'Támogatott projektek',
-      description: 'Csak a támogatott státuszú projektek',
-      count: projects.filter(p => p.statusz === 'támogatott').length,
-      getData: () => projects.filter(p => p.statusz === 'támogatott'),
-      filename: 'nea-tamogatott-projektek',
-    },
-    {
-      title: 'Kizárt projektek',
-      description: 'Csak a kizárt státuszú projektek',
-      count: projects.filter(p => p.statusz === 'kizárt').length,
-      getData: () => projects.filter(p => p.statusz === 'kizárt'),
-      filename: 'nea-kizart-projektek',
+      title: 'Elutasított pályázatok',
+      description: 'Elutasított és nem támogatott pályázatok',
+      count: projects.filter(p => {
+        const d = p.palyazati_dontes.toLowerCase();
+        return d === 'elutasított' || d === 'nem támogatott';
+      }).length,
+      getData: () => projects.filter(p => {
+        const d = p.palyazati_dontes.toLowerCase();
+        return d === 'elutasított' || d === 'nem támogatott';
+      }),
+      filename: 'nea-elutasitott-palyazatok',
     },
   ];
 
@@ -143,7 +138,7 @@ export default function Letoltes() {
                 <h3 className="font-display text-lg font-semibold">{option.title}</h3>
                 <p className="text-sm text-muted-foreground">{option.description}</p>
                 <p className="mt-1 text-2xl font-bold text-primary">
-                  {option.count.toLocaleString('hu-HU')} <span className="text-sm font-normal text-muted-foreground">projekt</span>
+                  {option.count.toLocaleString('hu-HU')} <span className="text-sm font-normal text-muted-foreground">pályázat</span>
                 </p>
               </div>
               
