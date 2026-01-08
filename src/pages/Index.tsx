@@ -4,7 +4,6 @@ import { FilterPanel } from '@/components/dashboard/FilterPanel';
 import { ProjectTable } from '@/components/dashboard/ProjectTable';
 import { BarChartComponent } from '@/components/charts/BarChartComponent';
 import { PieChartComponent } from '@/components/charts/PieChartComponent';
-import { LineChartComponent } from '@/components/charts/LineChartComponent';
 import { useProjectData } from '@/hooks/useProjectData';
 import { Wallet, FileText, Trophy, TrendingUp, Loader2 } from 'lucide-react';
 
@@ -43,22 +42,25 @@ export default function Index() {
   }
 
   // Prepare chart data
-  const megyeChartData = Object.entries(aggregatedData.megyenkent)
+  const varosChartData = Object.entries(aggregatedData.varosokSzerint)
     .map(([name, data]) => ({ name, value: data.osszeg, count: data.count }))
     .sort((a, b) => b.value - a.value)
     .slice(0, 10);
 
-  const evChartData = Object.entries(aggregatedData.evenkent)
+  const besorolasChartData = Object.entries(aggregatedData.besorolasSzerint)
     .map(([name, data]) => ({ name, value: data.osszeg, count: data.count }))
-    .sort((a, b) => parseInt(a.name) - parseInt(b.name));
+    .sort((a, b) => b.value - a.value)
+    .slice(0, 8);
 
-  const statuszChartData = Object.entries(aggregatedData.statuszokSzerint)
+  const dontesChartData = Object.entries(aggregatedData.dontesSzerint)
     .map(([name, value]) => ({ name, value }));
 
-  const kategoriaChartData = Object.entries(aggregatedData.kategoriaként)
+  const szervezetTipusChartData = Object.entries(aggregatedData.szervezetTipusSzerint)
     .map(([name, data]) => ({ name, value: data.osszeg }))
     .sort((a, b) => b.value - a.value)
     .slice(0, 6);
+
+  const nyertesCount = aggregatedData.dontesSzerint['Nyertes'] || aggregatedData.dontesSzerint['nyertes'] || 0;
 
   return (
     <Layout>
@@ -77,18 +79,18 @@ export default function Index() {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <StatCard
             title="Összes támogatás"
-            value={formatCurrency(aggregatedData.osszesTamogatott)}
+            value={formatCurrency(aggregatedData.osszesTamogatas)}
             icon={Wallet}
             variant="primary"
           />
           <StatCard
-            title="Projektek száma"
+            title="Pályázatok száma"
             value={aggregatedData.projektekSzama.toLocaleString('hu-HU')}
             icon={FileText}
           />
           <StatCard
-            title="Nyertes projektek"
-            value={aggregatedData.statuszokSzerint['nyertes']?.toLocaleString('hu-HU') || '0'}
+            title="Nyertes pályázatok"
+            value={nyertesCount.toLocaleString('hu-HU')}
             icon={Trophy}
             variant="success"
           />
@@ -109,31 +111,31 @@ export default function Index() {
 
         {/* Charts Row */}
         <div className="grid gap-6 lg:grid-cols-2">
-          <LineChartComponent
-            data={evChartData}
-            title="Támogatás évek szerint"
-          />
           <PieChartComponent
-            data={statuszChartData}
-            title="Projektek státusz szerint"
+            data={dontesChartData}
+            title="Pályázatok döntés szerint"
+          />
+          <BarChartComponent
+            data={szervezetTipusChartData}
+            title="Szervezet típusok szerinti eloszlás"
           />
         </div>
 
         <div className="grid gap-6 lg:grid-cols-2">
           <BarChartComponent
-            data={megyeChartData}
-            title="Top 10 megye támogatás szerint"
+            data={varosChartData}
+            title="Top 10 város támogatás szerint"
           />
           <BarChartComponent
-            data={kategoriaChartData}
-            title="Kategóriák szerinti eloszlás"
+            data={besorolasChartData}
+            title="Besorolás szerinti eloszlás"
           />
         </div>
 
         {/* Projects Table */}
         <div>
-          <h2 className="mb-4 font-display text-xl font-semibold">Legutóbbi projektek</h2>
-          <ProjectTable projects={filteredProjects} maxRows={10} />
+          <h2 className="mb-4 font-display text-xl font-semibold">Pályázatok</h2>
+          <ProjectTable projects={filteredProjects} maxRows={20} />
         </div>
       </div>
     </Layout>

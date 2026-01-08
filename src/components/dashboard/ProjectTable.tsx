@@ -8,7 +8,7 @@ interface ProjectTableProps {
   maxRows?: number;
 }
 
-type SortField = 'palyazat_nev' | 'szervezet_nev' | 'varos' | 'tamogatott_osszeg' | 'ev';
+type SortField = 'palyazat_targya' | 'szervezet_neve' | 'szekhely_varos' | 'tamogatas' | 'palyazati_dontes';
 type SortDirection = 'asc' | 'desc';
 
 function formatCurrency(amount: number): string {
@@ -20,14 +20,18 @@ function formatCurrency(amount: number): string {
 }
 
 const statusColors: Record<string, string> = {
-  'támogatott': 'bg-primary/20 text-primary border-primary/30',
+  'Nyertes': 'bg-success/20 text-success border-success/30',
   'nyertes': 'bg-success/20 text-success border-success/30',
-  'kizárt': 'bg-destructive/20 text-destructive border-destructive/30',
-  'elutasított': 'bg-muted text-muted-foreground border-border',
+  'Nem támogatott': 'bg-destructive/20 text-destructive border-destructive/30',
+  'nem támogatott': 'bg-destructive/20 text-destructive border-destructive/30',
+  'Elutasított': 'bg-destructive/20 text-destructive border-destructive/30',
+  'elutasított': 'bg-destructive/20 text-destructive border-destructive/30',
+  'Érvénytelen': 'bg-muted text-muted-foreground border-border',
+  'Várólistás': 'bg-warning/20 text-warning border-warning/30',
 };
 
 export function ProjectTable({ projects, maxRows }: ProjectTableProps) {
-  const [sortField, setSortField] = useState<SortField>('tamogatott_osszeg');
+  const [sortField, setSortField] = useState<SortField>('tamogatas');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [page, setPage] = useState(0);
   const rowsPerPage = maxRows || 20;
@@ -44,13 +48,13 @@ export function ProjectTable({ projects, maxRows }: ProjectTableProps) {
   const sortedProjects = [...projects].sort((a, b) => {
     let comparison = 0;
     switch (sortField) {
-      case 'palyazat_nev':
-      case 'szervezet_nev':
-      case 'varos':
-        comparison = a[sortField].localeCompare(b[sortField], 'hu');
+      case 'palyazat_targya':
+      case 'szervezet_neve':
+      case 'szekhely_varos':
+      case 'palyazati_dontes':
+        comparison = (a[sortField] || '').localeCompare(b[sortField] || '', 'hu');
         break;
-      case 'tamogatott_osszeg':
-      case 'ev':
+      case 'tamogatas':
         comparison = a[sortField] - b[sortField];
         break;
     }
@@ -78,75 +82,67 @@ export function ProjectTable({ projects, maxRows }: ProjectTableProps) {
           <table className="data-table">
             <thead className="sticky top-0 z-10">
               <tr>
+                <th>Azonosító</th>
                 <th 
                   className="cursor-pointer hover:bg-muted/80"
-                  onClick={() => handleSort('palyazat_nev')}
-                >
-                  <div className="flex items-center gap-1">
-                    Pályázat neve
-                    <SortIcon field="palyazat_nev" />
-                  </div>
-                </th>
-                <th 
-                  className="cursor-pointer hover:bg-muted/80"
-                  onClick={() => handleSort('szervezet_nev')}
+                  onClick={() => handleSort('szervezet_neve')}
                 >
                   <div className="flex items-center gap-1">
                     Szervezet
-                    <SortIcon field="szervezet_nev" />
+                    <SortIcon field="szervezet_neve" />
                   </div>
                 </th>
                 <th 
                   className="cursor-pointer hover:bg-muted/80"
-                  onClick={() => handleSort('varos')}
+                  onClick={() => handleSort('szekhely_varos')}
                 >
                   <div className="flex items-center gap-1">
                     Város
-                    <SortIcon field="varos" />
+                    <SortIcon field="szekhely_varos" />
                   </div>
                 </th>
-                <th>Megye</th>
+                <th>Besorolás</th>
                 <th 
                   className="cursor-pointer hover:bg-muted/80 text-right"
-                  onClick={() => handleSort('tamogatott_osszeg')}
+                  onClick={() => handleSort('tamogatas')}
                 >
                   <div className="flex items-center justify-end gap-1">
                     Támogatás
-                    <SortIcon field="tamogatott_osszeg" />
+                    <SortIcon field="tamogatas" />
                   </div>
                 </th>
                 <th 
                   className="cursor-pointer hover:bg-muted/80"
-                  onClick={() => handleSort('ev')}
+                  onClick={() => handleSort('palyazati_dontes')}
                 >
                   <div className="flex items-center gap-1">
-                    Év
-                    <SortIcon field="ev" />
+                    Döntés
+                    <SortIcon field="palyazati_dontes" />
                   </div>
                 </th>
-                <th>Státusz</th>
               </tr>
             </thead>
             <tbody>
-              {paginatedProjects.map((project) => (
-                <tr key={project.id} className="group">
-                  <td className="max-w-[300px]">
+              {paginatedProjects.map((project, idx) => (
+                <tr key={`${project.azonosito}-${idx}`} className="group">
+                  <td>
                     <div className="flex items-center gap-2">
-                      <span className="truncate font-medium">{project.palyazat_nev}</span>
+                      <span className="font-mono text-xs text-muted-foreground">{project.azonosito}</span>
                       <ExternalLink className="h-3 w-3 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
                     </div>
-                    <span className="text-xs text-muted-foreground">{project.id}</span>
                   </td>
-                  <td className="max-w-[200px] truncate">{project.szervezet_nev}</td>
-                  <td>{project.varos}</td>
-                  <td className="text-muted-foreground">{project.megye}</td>
+                  <td className="max-w-[250px]">
+                    <div className="truncate font-medium">{project.szervezet_neve}</div>
+                    <div className="text-xs text-muted-foreground font-mono">{project.adoszama}</div>
+                  </td>
+                  <td>{project.szekhely_varos}</td>
+                  <td className="max-w-[150px] truncate text-muted-foreground">{project.besorolas}</td>
                   <td className="text-right font-medium tabular-nums">
-                    {formatCurrency(project.tamogatott_osszeg)}
+                    {formatCurrency(project.tamogatas)}
                   </td>
-                  <td>{project.ev}</td>
                   <td>
-                    <span className={`inline-flex rounded-full border px-2.5 py-0.5 text-xs font-medium ${statusColors[project.statusz] || statusColors.elutasított}`}>
-                      {project.statusz}
+                    <span className={`inline-flex rounded-full border px-2.5 py-0.5 text-xs font-medium ${statusColors[project.palyazati_dontes] || 'bg-muted text-muted-foreground border-border'}`}>
+                      {project.palyazati_dontes}
                     </span>
                   </td>
                 </tr>
@@ -160,7 +156,7 @@ export function ProjectTable({ projects, maxRows }: ProjectTableProps) {
       {totalPages > 1 && (
         <div className="flex items-center justify-between">
           <p className="text-sm text-muted-foreground">
-            {page * rowsPerPage + 1} - {Math.min((page + 1) * rowsPerPage, projects.length)} / {projects.length} projekt
+            {page * rowsPerPage + 1} - {Math.min((page + 1) * rowsPerPage, projects.length)} / {projects.length.toLocaleString('hu-HU')} projekt
           </p>
           <div className="flex gap-2">
             <Button

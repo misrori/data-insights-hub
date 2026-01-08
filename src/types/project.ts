@@ -1,42 +1,34 @@
 export interface Project {
-  id: string;
-  palyazat_nev: string;
-  szervezet_nev: string;
-  varos: string;
-  megye: string;
-  regio: string;
-  kisterseg: string;
-  igenyelt_osszeg: number;
-  tamogatott_osszeg: number;
-  onresz: number;
-  statusz: 'támogatott' | 'kizárt' | 'nyertes' | 'elutasított';
-  kollaciok: string;
-  ev: number;
-  datum: string;
-  kategoria: string;
-  alkategoria: string;
-  leiras?: string;
+  azonosito: string;
+  szervezet_neve: string;
+  adoszama: string;
+  besorolas: string;
+  szekhely_varos: string;
+  szekhely_orszag: string;
+  szervezet_tipusa: string;
+  tamogatas: number;
+  palyazati_dontes: string;
+  palyazat_targya: string;
 }
 
 export interface FilterState {
   searchQuery: string;
-  statusz: string[];
-  megye: string[];
-  ev: number[];
-  kategoria: string[];
+  dontes: string[];
+  varos: string[];
+  besorolas: string[];
+  szervezet_tipusa: string[];
   minOsszeg: number;
   maxOsszeg: number;
 }
 
 export interface AggregatedData {
-  osszesIgenyelt: number;
-  osszesTamogatott: number;
+  osszesTamogatas: number;
   projektekSzama: number;
   atlagTamogatas: number;
-  megyenkent: Record<string, { count: number; osszeg: number }>;
-  evenkent: Record<number, { count: number; osszeg: number }>;
-  kategoriaként: Record<string, { count: number; osszeg: number }>;
-  statuszokSzerint: Record<string, number>;
+  varosokSzerint: Record<string, { count: number; osszeg: number }>;
+  besorolasSzerint: Record<string, { count: number; osszeg: number }>;
+  dontesSzerint: Record<string, number>;
+  szervezetTipusSzerint: Record<string, { count: number; osszeg: number }>;
 }
 
 export interface GeoJsonFeature {

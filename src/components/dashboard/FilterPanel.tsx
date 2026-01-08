@@ -12,10 +12,10 @@ import {
 interface FilterPanelProps {
   filters: FilterState;
   uniqueValues: {
-    megyék: string[];
-    évek: number[];
-    kategoriák: string[];
-    statuszok: string[];
+    varosok: string[];
+    besorolasok: string[];
+    dontesek: string[];
+    szervezetTipusok: string[];
   };
   onUpdateFilter: <K extends keyof FilterState>(key: K, value: FilterState[K]) => void;
   onResetFilters: () => void;
@@ -29,10 +29,10 @@ export function FilterPanel({
 }: FilterPanelProps) {
   const hasActiveFilters = 
     filters.searchQuery ||
-    filters.statusz.length > 0 ||
-    filters.megye.length > 0 ||
-    filters.ev.length > 0 ||
-    filters.kategoria.length > 0;
+    filters.dontes.length > 0 ||
+    filters.varos.length > 0 ||
+    filters.besorolas.length > 0 ||
+    filters.szervezet_tipusa.length > 0;
 
   return (
     <div className="space-y-4 rounded-xl border border-border bg-card p-4">
@@ -41,7 +41,7 @@ export function FilterPanel({
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <input
           type="text"
-          placeholder="Keresés név, szervezet, város..."
+          placeholder="Keresés azonosító, szervezet, város, besorolás..."
           value={filters.searchQuery}
           onChange={(e) => onUpdateFilter('searchQuery', e.target.value)}
           className="search-input pl-10"
@@ -63,74 +63,74 @@ export function FilterPanel({
           <span>Szűrők:</span>
         </div>
 
-        {/* Status Filter */}
+        {/* Decision Filter */}
         <Select
-          value={filters.statusz[0] || 'all'}
+          value={filters.dontes[0] || 'all'}
           onValueChange={(value) => 
-            onUpdateFilter('statusz', value === 'all' ? [] : [value])
-          }
-        >
-          <SelectTrigger className="w-40 bg-secondary border-border">
-            <SelectValue placeholder="Státusz" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Minden státusz</SelectItem>
-            <SelectItem value="támogatott">Támogatott</SelectItem>
-            <SelectItem value="nyertes">Nyertes</SelectItem>
-            <SelectItem value="kizárt">Kizárt</SelectItem>
-          </SelectContent>
-        </Select>
-
-        {/* County Filter */}
-        <Select
-          value={filters.megye[0] || 'all'}
-          onValueChange={(value) => 
-            onUpdateFilter('megye', value === 'all' ? [] : [value])
+            onUpdateFilter('dontes', value === 'all' ? [] : [value])
           }
         >
           <SelectTrigger className="w-44 bg-secondary border-border">
-            <SelectValue placeholder="Megye" />
+            <SelectValue placeholder="Döntés" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Minden megye</SelectItem>
-            {uniqueValues.megyék.map(megye => (
-              <SelectItem key={megye} value={megye}>{megye}</SelectItem>
+            <SelectItem value="all">Minden döntés</SelectItem>
+            {uniqueValues.dontesek.map(dontes => (
+              <SelectItem key={dontes} value={dontes}>{dontes}</SelectItem>
             ))}
           </SelectContent>
         </Select>
 
-        {/* Year Filter */}
+        {/* City Filter */}
         <Select
-          value={filters.ev[0]?.toString() || 'all'}
+          value={filters.varos[0] || 'all'}
           onValueChange={(value) => 
-            onUpdateFilter('ev', value === 'all' ? [] : [parseInt(value)])
+            onUpdateFilter('varos', value === 'all' ? [] : [value])
           }
         >
-          <SelectTrigger className="w-32 bg-secondary border-border">
-            <SelectValue placeholder="Év" />
+          <SelectTrigger className="w-44 bg-secondary border-border">
+            <SelectValue placeholder="Város" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Minden év</SelectItem>
-            {uniqueValues.évek.map(ev => (
-              <SelectItem key={ev} value={ev.toString()}>{ev}</SelectItem>
+            <SelectItem value="all">Minden város</SelectItem>
+            {uniqueValues.varosok.slice(0, 100).map(varos => (
+              <SelectItem key={varos} value={varos}>{varos}</SelectItem>
             ))}
           </SelectContent>
         </Select>
 
-        {/* Category Filter */}
+        {/* Classification Filter */}
         <Select
-          value={filters.kategoria[0] || 'all'}
+          value={filters.besorolas[0] || 'all'}
           onValueChange={(value) => 
-            onUpdateFilter('kategoria', value === 'all' ? [] : [value])
+            onUpdateFilter('besorolas', value === 'all' ? [] : [value])
           }
         >
-          <SelectTrigger className="w-44 bg-secondary border-border">
-            <SelectValue placeholder="Kategória" />
+          <SelectTrigger className="w-48 bg-secondary border-border">
+            <SelectValue placeholder="Besorolás" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Minden kategória</SelectItem>
-            {uniqueValues.kategoriák.map(kat => (
-              <SelectItem key={kat} value={kat}>{kat}</SelectItem>
+            <SelectItem value="all">Minden besorolás</SelectItem>
+            {uniqueValues.besorolasok.map(besorolas => (
+              <SelectItem key={besorolas} value={besorolas}>{besorolas}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        {/* Organization Type Filter */}
+        <Select
+          value={filters.szervezet_tipusa[0] || 'all'}
+          onValueChange={(value) => 
+            onUpdateFilter('szervezet_tipusa', value === 'all' ? [] : [value])
+          }
+        >
+          <SelectTrigger className="w-48 bg-secondary border-border">
+            <SelectValue placeholder="Szervezet típusa" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Minden típus</SelectItem>
+            {uniqueValues.szervezetTipusok.map(tipus => (
+              <SelectItem key={tipus} value={tipus}>{tipus}</SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -160,18 +160,26 @@ export function FilterPanel({
               </button>
             </span>
           )}
-          {filters.statusz.map(s => (
-            <span key={s} className="filter-chip active">
-              {s}
-              <button onClick={() => onUpdateFilter('statusz', filters.statusz.filter(x => x !== s))}>
+          {filters.dontes.map(d => (
+            <span key={d} className="filter-chip active">
+              {d}
+              <button onClick={() => onUpdateFilter('dontes', filters.dontes.filter(x => x !== d))}>
                 <X className="h-3 w-3" />
               </button>
             </span>
           ))}
-          {filters.megye.map(m => (
-            <span key={m} className="filter-chip active">
-              {m}
-              <button onClick={() => onUpdateFilter('megye', filters.megye.filter(x => x !== m))}>
+          {filters.varos.map(v => (
+            <span key={v} className="filter-chip active">
+              {v}
+              <button onClick={() => onUpdateFilter('varos', filters.varos.filter(x => x !== v))}>
+                <X className="h-3 w-3" />
+              </button>
+            </span>
+          ))}
+          {filters.besorolas.map(b => (
+            <span key={b} className="filter-chip active">
+              {b}
+              <button onClick={() => onUpdateFilter('besorolas', filters.besorolas.filter(x => x !== b))}>
                 <X className="h-3 w-3" />
               </button>
             </span>
