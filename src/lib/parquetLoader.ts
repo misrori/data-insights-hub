@@ -6,8 +6,15 @@ let wasmInitialized = false;
 
 async function initParquetWasm() {
   if (!wasmInitialized) {
-    await initWasm();
-    wasmInitialized = true;
+    try {
+      await initWasm('/parquet_wasm_bg.wasm');
+      wasmInitialized = true;
+    } catch (error) {
+      console.error('Failed to initialize parquet-wasm:', error);
+      // Fallback to default init if path fails
+      await initWasm();
+      wasmInitialized = true;
+    }
   }
 }
 
@@ -64,6 +71,10 @@ export async function loadParquetData(): Promise<Project[]> {
         }
       }
       
+      if (i < 3) {
+        console.log(`Row ${i} raw data:`, row);
+      }
+      
       projects.push({
         azonosito: row.azonosito?.toString() || `proj-${i}`,
         szervezet_neve: row.szervezet_neve?.toString() || 'N/A',
@@ -74,11 +85,13 @@ export async function loadParquetData(): Promise<Project[]> {
         szervezet_tipusa: row.szervezet_tipusa?.toString() || 'N/A',
         tamogatas: parseHungarianNumber(row.tamogatas),
         palyazati_dontes: normalizeStatus(row.palyazati_dontes?.toString()),
-        palyazat_targya: row.palyazat_targya?.toString() || '',
+        palyazat_targya: row.palyat_targya?.toString() || row.palyazat_targya?.toString() || '',
+        megye: row.megye?.toString() || '',
+        regio: row.regio?.toString() || '',
       });
     }
     
-    console.log('Loaded projects:', projects.length);
+    console.log('Loaded projects count:', projects.length);
     return projects;
   } catch (error) {
     console.error('Error loading parquet data:', error);

@@ -13,14 +13,8 @@ export default function Nyertes() {
     updateFilter,
     resetFilters,
     uniqueValues,
-  } = useProjectData();
-
-  const nyertesProjects = useMemo(() => 
-    filteredProjects.filter(p => 
-      p.palyazati_dontes.toLowerCase() === 'nyertes'
-    ),
-    [filteredProjects]
-  );
+    groupedProjects,
+  } = useProjectData({ dontes: ['Nyertes'] });
 
   if (loading) {
     return (
@@ -42,7 +36,7 @@ export default function Nyertes() {
           <div>
             <h1 className="font-display text-2xl font-bold">Nyertes pályázatok</h1>
             <p className="text-muted-foreground">
-              {nyertesProjects.length.toLocaleString('hu-HU')} nyertes pályázat
+              {filteredProjects.length.toLocaleString('hu-HU')} nyertes pályázat
             </p>
           </div>
         </div>
@@ -54,7 +48,10 @@ export default function Nyertes() {
           onResetFilters={resetFilters}
         />
 
-        <ProjectTable projects={nyertesProjects} />
+        <ProjectTable
+          projects={filteredProjects}
+          groupedProjects={groupedProjects}
+        />
       </div>
     </Layout>
   );

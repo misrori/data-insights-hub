@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { Project } from '@/types/project';
+import { Project, GroupedProject } from '@/types/project';
 import { ChevronDown, ChevronUp, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface ProjectTableProps {
   projects: Project[];
+  groupedProjects?: GroupedProject[] | null;
   maxRows?: number;
 }
 
@@ -30,11 +31,14 @@ const statusColors: Record<string, string> = {
   'Várólistás': 'bg-warning/20 text-warning border-warning/30',
 };
 
-export function ProjectTable({ projects, maxRows }: ProjectTableProps) {
+export function ProjectTable({ projects, groupedProjects, maxRows }: ProjectTableProps) {
   const [sortField, setSortField] = useState<SortField>('tamogatas');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [page, setPage] = useState(0);
   const rowsPerPage = maxRows || 20;
+
+  const isGrouped = !!groupedProjects;
+  const currentData = isGrouped ? groupedProjects : projects;
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -45,33 +49,50 @@ export function ProjectTable({ projects, maxRows }: ProjectTableProps) {
     }
   };
 
-  const sortedProjects = [...projects].sort((a, b) => {
+  const sortedData = [...(currentData || [])].sort((a, b) => {
     let comparison = 0;
-    switch (sortField) {
-      case 'palyazat_targya':
-      case 'szervezet_neve':
-      case 'szekhely_varos':
-      case 'palyazati_dontes':
-        comparison = (a[sortField] || '').localeCompare(b[sortField] || '', 'hu');
-        break;
-      case 'tamogatas':
-        comparison = a[sortField] - b[sortField];
-        break;
+
+    // Type guard for GroupedProject vs Project sorting
+    if ('palyazat_targya' in a && 'palyazat_targya' in b) {
+      // Sorting for Project
+      const pA = a as Project;
+      const pB = b as Project;
+      switch (sortField) {
+        case 'palyazat_targya':
+        case 'szervezet_neve':
+        case 'szekhely_varos':
+        case 'palyazati_dontes':
+          comparison = (pA[sortField] || '').localeCompare(pB[sortField] || '', 'hu');
+          break;
+        case 'tamogatas':
+          comparison = pA[sortField] - pB[sortField];
+          break;
+      }
+    } else {
+      // Sorting for GroupedProject
+      const gA = a as GroupedProject;
+      const gB = b as GroupedProject;
+      if (sortField === 'tamogatas') {
+        comparison = gA.tamogatas - gB.tamogatas;
+      } else if (sortField === 'szervezet_neve') {
+        comparison = gA.name.localeCompare(gB.name, 'hu');
+      }
     }
+
     return sortDirection === 'asc' ? comparison : -comparison;
   });
 
-  const paginatedProjects = sortedProjects.slice(
+  const paginatedData = sortedData.slice(
     page * rowsPerPage,
     (page + 1) * rowsPerPage
   );
 
-  const totalPages = Math.ceil(projects.length / rowsPerPage);
+  const totalPages = Math.ceil((currentData?.length || 0) / rowsPerPage);
 
   const SortIcon = ({ field }: { field: SortField }) => {
     if (sortField !== field) return null;
-    return sortDirection === 'asc' ? 
-      <ChevronUp className="h-4 w-4" /> : 
+    return sortDirection === 'asc' ?
+      <ChevronUp className="h-4 w-4" /> :
       <ChevronDown className="h-4 w-4" />;
   };
 
@@ -83,7 +104,7 @@ export function ProjectTable({ projects, maxRows }: ProjectTableProps) {
             <thead className="sticky top-0 z-10">
               <tr>
                 <th>Azonosító</th>
-                <th 
+                <th
                   className="cursor-pointer hover:bg-muted/80"
                   onClick={() => handleSort('szervezet_neve')}
                 >
@@ -92,7 +113,7 @@ export function ProjectTable({ projects, maxRows }: ProjectTableProps) {
                     <SortIcon field="szervezet_neve" />
                   </div>
                 </th>
-                <th 
+                <th
                   className="cursor-pointer hover:bg-muted/80"
                   onClick={() => handleSort('szekhely_varos')}
                 >
@@ -102,7 +123,7 @@ export function ProjectTable({ projects, maxRows }: ProjectTableProps) {
                   </div>
                 </th>
                 <th>Besorolás</th>
-                <th 
+                <th
                   className="cursor-pointer hover:bg-muted/80 text-right"
                   onClick={() => handleSort('tamogatas')}
                 >
@@ -111,7 +132,7 @@ export function ProjectTable({ projects, maxRows }: ProjectTableProps) {
                     <SortIcon field="tamogatas" />
                   </div>
                 </th>
-                <th 
+                <th
                   className="cursor-pointer hover:bg-muted/80"
                   onClick={() => handleSort('palyazati_dontes')}
                 >
@@ -123,30 +144,50 @@ export function ProjectTable({ projects, maxRows }: ProjectTableProps) {
               </tr>
             </thead>
             <tbody>
-              {paginatedProjects.map((project, idx) => (
-                <tr key={`${project.azonosito}-${idx}`} className="group">
-                  <td>
-                    <div className="flex items-center gap-2">
-                      <span className="font-mono text-xs text-muted-foreground">{project.azonosito}</span>
-                      <ExternalLink className="h-3 w-3 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
-                    </div>
-                  </td>
-                  <td className="max-w-[250px]">
-                    <div className="truncate font-medium">{project.szervezet_neve}</div>
-                    <div className="text-xs text-muted-foreground font-mono">{project.adoszama}</div>
-                  </td>
-                  <td>{project.szekhely_varos}</td>
-                  <td className="max-w-[150px] truncate text-muted-foreground">{project.besorolas}</td>
-                  <td className="text-right font-medium tabular-nums">
-                    {formatCurrency(project.tamogatas)}
-                  </td>
-                  <td>
-                    <span className={`inline-flex rounded-full border px-2.5 py-0.5 text-xs font-medium ${statusColors[project.palyazati_dontes] || 'bg-muted text-muted-foreground border-border'}`}>
-                      {project.palyazati_dontes}
-                    </span>
-                  </td>
-                </tr>
-              ))}
+              {isGrouped ? (
+                (paginatedData as GroupedProject[]).map((group, idx) => (
+                  <tr key={`${group.id}-${idx}`} className="group">
+                    <td colSpan={2}>
+                      <div className="font-medium">{group.name}</div>
+                      {group.adoszama && (
+                        <div className="text-xs text-muted-foreground font-mono">{group.adoszama}</div>
+                      )}
+                    </td>
+                    <td colSpan={2} className="text-muted-foreground">
+                      {group.count} db projekt
+                    </td>
+                    <td className="text-right font-bold tabular-nums text-primary">
+                      {formatCurrency(group.tamogatas)}
+                    </td>
+                    <td></td>
+                  </tr>
+                ))
+              ) : (
+                (paginatedData as Project[]).map((project, idx) => (
+                  <tr key={`${project.azonosito}-${idx}`} className="group">
+                    <td>
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-xs text-muted-foreground">{project.azonosito}</span>
+                        <ExternalLink className="h-3 w-3 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
+                      </div>
+                    </td>
+                    <td className="max-w-[250px]">
+                      <div className="truncate font-medium">{project.szervezet_neve}</div>
+                      <div className="text-xs text-muted-foreground font-mono">{project.adoszama}</div>
+                    </td>
+                    <td>{project.szekhely_varos}</td>
+                    <td className="max-w-[150px] truncate text-muted-foreground">{project.besorolas}</td>
+                    <td className="text-right font-medium tabular-nums">
+                      {formatCurrency(project.tamogatas)}
+                    </td>
+                    <td>
+                      <span className={`inline-flex rounded-full border px-2.5 py-0.5 text-xs font-medium ${statusColors[project.palyazati_dontes] || 'bg-muted text-muted-foreground border-border'}`}>
+                        {project.palyazati_dontes}
+                      </span>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
@@ -156,7 +197,7 @@ export function ProjectTable({ projects, maxRows }: ProjectTableProps) {
       {totalPages > 1 && (
         <div className="flex items-center justify-between">
           <p className="text-sm text-muted-foreground">
-            {page * rowsPerPage + 1} - {Math.min((page + 1) * rowsPerPage, projects.length)} / {projects.length.toLocaleString('hu-HU')} projekt
+            {page * rowsPerPage + 1} - {Math.min((page + 1) * rowsPerPage, currentData?.length || 0)} / {(currentData?.length || 0).toLocaleString('hu-HU')} {isGrouped ? 'csoport' : 'projekt'}
           </p>
           <div className="flex gap-2">
             <Button

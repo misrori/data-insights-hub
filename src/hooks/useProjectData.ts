@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Project, FilterState, AggregatedData } from '@/types/project';
+import { Project, FilterState, AggregatedData, GroupedProject } from '@/types/project';
 import { loadParquetData } from '@/lib/parquetLoader';
 
 const defaultFilters: FilterState = {
@@ -10,13 +10,17 @@ const defaultFilters: FilterState = {
   szervezet_tipusa: [],
   minOsszeg: 0,
   maxOsszeg: Infinity,
+  groupBy: 'none',
 };
 
-export function useProjectData() {
+export function useProjectData(initialFilters?: Partial<FilterState>) {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [filters, setFilters] = useState<FilterState>(defaultFilters);
+  const [filters, setFilters] = useState<FilterState>({
+    ...defaultFilters,
+    ...initialFilters
+  });
 
   useEffect(() => {
     loadParquetData()
@@ -43,7 +47,7 @@ export function useProjectData() {
           project.azonosito,
           project.besorolas,
         ].map(f => f?.toLowerCase() || '');
-        
+
         if (!searchFields.some(f => f.includes(query))) {
           return false;
         }
@@ -123,12 +127,62 @@ export function useProjectData() {
       data.szervezetTipusSzerint[project.szervezet_tipusa].osszeg += project.tamogatas;
     });
 
-    data.atlagTamogatas = data.projektekSzama > 0 
-      ? data.osszesTamogatas / data.projektekSzama 
+    data.atlagTamogatas = data.projektekSzama > 0
+      ? data.osszesTamogatas / data.projektekSzama
       : 0;
 
     return data;
   }, [filteredProjects]);
+
+  const groupedProjects = useMemo(() => {
+    if (!filters.groupBy || filters.groupBy === 'none') return null;
+
+    const groups: Record<string, GroupedProject> = {};
+
+    filteredProjects.forEach(project => {
+      let key = '';
+      let name = '';
+      let adoszama: string | undefined = undefined;
+
+      switch (filters.groupBy) {
+        case 'szervezet':
+          key = `${project.szervezet_neve}-${project.adoszama}`;
+          name = project.szervezet_neve;
+          adoszama = project.adoszama;
+          break;
+        case 'varos':
+          key = project.szekhely_varos;
+          name = project.szekhely_varos;
+          break;
+        case 'besorolas':
+          key = project.besorolas;
+          name = project.besorolas;
+          break;
+        case 'szervezet_tipusa':
+          key = project.szervezet_tipusa;
+          name = project.szervezet_tipusa;
+          break;
+        case 'dontes':
+          key = project.palyazati_dontes;
+          name = project.palyazati_dontes;
+          break;
+      }
+
+      if (!groups[key]) {
+        groups[key] = {
+          id: key,
+          name,
+          adoszama,
+          count: 0,
+          tamogatas: 0
+        };
+      }
+      groups[key].count++;
+      groups[key].tamogatas += project.tamogatas;
+    });
+
+    return Object.values(groups).sort((a, b) => b.tamogatas - a.tamogatas);
+  }, [filteredProjects, filters.groupBy]);
 
   const uniqueValues = useMemo(() => ({
     varosok: [...new Set(projects.map(p => p.szekhely_varos))].filter(Boolean).sort(),
@@ -155,5 +209,6 @@ export function useProjectData() {
     resetFilters,
     aggregatedData,
     uniqueValues,
+    groupedProjects,
   };
 }

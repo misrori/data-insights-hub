@@ -1,8 +1,10 @@
+import { useMemo } from 'react';
 import { Layout } from '@/components/layout/Layout';
 import { StatCard } from '@/components/dashboard/StatCard';
 import { BarChartComponent } from '@/components/charts/BarChartComponent';
 import { PieChartComponent } from '@/components/charts/PieChartComponent';
 import { useProjectData } from '@/hooks/useProjectData';
+import { FilterPanel } from '@/components/dashboard/FilterPanel';
 import { Loader2, BarChart3, Wallet, FileText, TrendingUp, Percent } from 'lucide-react';
 
 function formatCurrency(amount: number): string {
@@ -16,7 +18,55 @@ function formatCurrency(amount: number): string {
 }
 
 export default function Statisztikak() {
-  const { projects, loading, aggregatedData } = useProjectData();
+  const {
+    projects,
+    filteredProjects,
+    loading,
+    aggregatedData,
+    filters,
+    uniqueValues,
+    updateFilter,
+    resetFilters
+  } = useProjectData();
+
+  /* 
+   * Calculate Top 50 Winners 
+   * Group by Tax Number (adoszama) + Name (szervezet_neve) to handle duplicates/variations
+   */
+  const topWinners = useMemo(() => {
+    const winnersMap = new Map<string, { name: string; count: number; value: number }>();
+
+    filteredProjects.forEach(project => {
+      // Use adoszama for unique ID if available, otherwise name
+      const id = project.adoszama || project.szervezet_neve;
+      if (!id) return; // Skip invalid entries
+
+      const key = String(id);
+
+      if (!winnersMap.has(key)) {
+        winnersMap.set(key, {
+          name: project.szervezet_neve || 'Névtelen szervezet',
+          count: 0,
+          value: 0
+        });
+      }
+
+      const winner = winnersMap.get(key)!;
+      winner.count += 1;
+      winner.value += (Number(project.tamogatas) || 0);
+    });
+
+    const allWinners = Array.from(winnersMap.values());
+
+    return {
+      byAmount: [...allWinners]
+        .sort((a, b) => b.value - a.value)
+        .slice(0, 50),
+      byCount: [...allWinners]
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 50)
+    };
+  }, [filteredProjects]);
 
   if (loading) {
     return (
@@ -29,7 +79,7 @@ export default function Statisztikak() {
   }
 
   const nyertesCount = (aggregatedData.dontesSzerint['Nyertes'] || 0) + (aggregatedData.dontesSzerint['nyertes'] || 0);
-  const successRate = projects.length > 0 
+  const successRate = projects.length > 0
     ? (nyertesCount / projects.length) * 100
     : 0;
 
@@ -55,6 +105,9 @@ export default function Statisztikak() {
     .map(([name, data]) => ({ name, value: data.count }))
     .sort((a, b) => b.value - a.value)
     .slice(0, 10);
+
+
+
 
   return (
     <Layout>
@@ -97,6 +150,33 @@ export default function Statisztikak() {
           />
         </div>
 
+        <FilterPanel
+          filters={filters}
+          uniqueValues={uniqueValues}
+          onUpdateFilter={updateFilter}
+          onResetFilters={resetFilters}
+          showGrouping={false}
+        />
+
+        {/* Top 50 Winners Charts */}
+        <div className="grid gap-6 lg:grid-cols-2">
+          <BarChartComponent
+            data={topWinners.byAmount}
+            title="Top 50 nyertes támogatás összege szerint"
+            height={2000}
+            yAxisWidth={350}
+          />
+          <BarChartComponent
+            data={topWinners.byCount}
+            title="Top 50 nyertes elnyert projektek száma szerint"
+            height={2000}
+            yAxisWidth={350}
+            dataKey="count"
+            formatValue={(v) => `${v} db`}
+            tooltipLabel="Projektek száma"
+          />
+        </div>
+
         {/* Charts */}
         <div className="grid gap-6 lg:grid-cols-2">
           <PieChartComponent
@@ -118,6 +198,7 @@ export default function Statisztikak() {
             data={varosCountChartData}
             title="Top 10 város pályázatok száma szerint"
             formatValue={(v) => `${v} db`}
+            tooltipLabel="Projektek száma"
           />
         </div>
 

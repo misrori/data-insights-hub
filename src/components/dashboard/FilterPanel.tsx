@@ -1,4 +1,4 @@
-import { Search, X, Filter } from 'lucide-react';
+import { Search, X, Filter, BarChart2 } from 'lucide-react';
 import { FilterState } from '@/types/project';
 import { Button } from '@/components/ui/button';
 import {
@@ -19,20 +19,23 @@ interface FilterPanelProps {
   };
   onUpdateFilter: <K extends keyof FilterState>(key: K, value: FilterState[K]) => void;
   onResetFilters: () => void;
+  showGrouping?: boolean;
 }
 
-export function FilterPanel({ 
-  filters, 
-  uniqueValues, 
-  onUpdateFilter, 
-  onResetFilters 
+export function FilterPanel({
+  filters,
+  uniqueValues,
+  onUpdateFilter,
+  onResetFilters,
+  showGrouping = true
 }: FilterPanelProps) {
-  const hasActiveFilters = 
+  const hasActiveFilters =
     filters.searchQuery ||
     filters.dontes.length > 0 ||
     filters.varos.length > 0 ||
     filters.besorolas.length > 0 ||
-    filters.szervezet_tipusa.length > 0;
+    filters.szervezet_tipusa.length > 0 ||
+    (filters.groupBy && filters.groupBy !== 'none');
 
   return (
     <div className="space-y-4 rounded-xl border border-border bg-card p-4">
@@ -66,7 +69,7 @@ export function FilterPanel({
         {/* Decision Filter */}
         <Select
           value={filters.dontes[0] || 'all'}
-          onValueChange={(value) => 
+          onValueChange={(value) =>
             onUpdateFilter('dontes', value === 'all' ? [] : [value])
           }
         >
@@ -84,7 +87,7 @@ export function FilterPanel({
         {/* City Filter */}
         <Select
           value={filters.varos[0] || 'all'}
-          onValueChange={(value) => 
+          onValueChange={(value) =>
             onUpdateFilter('varos', value === 'all' ? [] : [value])
           }
         >
@@ -102,7 +105,7 @@ export function FilterPanel({
         {/* Classification Filter */}
         <Select
           value={filters.besorolas[0] || 'all'}
-          onValueChange={(value) => 
+          onValueChange={(value) =>
             onUpdateFilter('besorolas', value === 'all' ? [] : [value])
           }
         >
@@ -120,7 +123,7 @@ export function FilterPanel({
         {/* Organization Type Filter */}
         <Select
           value={filters.szervezet_tipusa[0] || 'all'}
-          onValueChange={(value) => 
+          onValueChange={(value) =>
             onUpdateFilter('szervezet_tipusa', value === 'all' ? [] : [value])
           }
         >
@@ -135,11 +138,34 @@ export function FilterPanel({
           </SelectContent>
         </Select>
 
+        {/* Grouping Filter - Hide if showGrouping is false */}
+        {showGrouping && (
+          <div className="flex items-center gap-2 border-l border-border pl-3 ml-1">
+            <BarChart2 className="h-4 w-4 text-primary" />
+            <Select
+              value={filters.groupBy || 'none'}
+              onValueChange={(value) => onUpdateFilter('groupBy', value as any)}
+            >
+              <SelectTrigger className="w-48 bg-primary/10 border-primary/20 text-primary hover:bg-primary/20 transition-colors">
+                <SelectValue placeholder="Csoportosítás" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Nincs csoportosítás</SelectItem>
+                <SelectItem value="szervezet">Nyertes pályázó szerint</SelectItem>
+                <SelectItem value="varos">Város szerint</SelectItem>
+                <SelectItem value="besorolas">Besorolás szerint</SelectItem>
+                <SelectItem value="szervezet_tipusa">Szervezet típusa szerint</SelectItem>
+                <SelectItem value="dontes">Döntés szerint</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+
         {/* Reset Button */}
         {hasActiveFilters && (
-          <Button 
-            variant="ghost" 
-            size="sm" 
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={onResetFilters}
             className="text-muted-foreground hover:text-foreground"
           >
@@ -184,6 +210,20 @@ export function FilterPanel({
               </button>
             </span>
           ))}
+          {showGrouping && filters.groupBy && filters.groupBy !== 'none' && (
+            <span className="filter-chip active bg-primary/20 text-primary border-primary/30">
+              Csoportosítás: {
+                filters.groupBy === 'szervezet' ? 'Nyertes pályázó' :
+                  filters.groupBy === 'varos' ? 'Város' :
+                    filters.groupBy === 'besorolas' ? 'Besorolás' :
+                      filters.groupBy === 'szervezet_tipusa' ? 'Szervezet típusa' :
+                        filters.groupBy === 'dontes' ? 'Döntés' : filters.groupBy
+              }
+              <button onClick={() => onUpdateFilter('groupBy', 'none')}>
+                <X className="h-3 w-3" />
+              </button>
+            </span>
+          )}
         </div>
       )}
     </div>

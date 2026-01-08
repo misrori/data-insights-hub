@@ -12,6 +12,7 @@ export default function Projektek() {
     updateFilter,
     resetFilters,
     uniqueValues,
+    groupedProjects,
   } = useProjectData();
 
   if (loading) {
@@ -46,7 +47,10 @@ export default function Projektek() {
           onResetFilters={resetFilters}
         />
 
-        <ProjectTable projects={filteredProjects} />
+        <ProjectTable
+          projects={filteredProjects}
+          groupedProjects={groupedProjects}
+        />
       </div>
     </Layout>
   );

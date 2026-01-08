@@ -29,7 +29,7 @@ function getColor(count: number): string {
 
 function MapController() {
   const map = useMap();
-  
+
   useEffect(() => {
     // Hungary bounds
     map.fitBounds([
@@ -37,39 +37,57 @@ function MapController() {
       [48.6, 22.9]
     ]);
   }, [map]);
-  
+
   return null;
 }
 
 export function ProjectMap({ projects, aggregatedByCity }: ProjectMapProps) {
-  const [geoData, setGeoData] = useState<GeoJsonData | null>(null);
+  const [geoData, setGeoData] = useState<any | null>(null);
   const [selectedCity, setSelectedCity] = useState<string | null>(null);
 
   useEffect(() => {
     loadGeoJsonData().then(data => {
-      if (data) setGeoData(data);
+      if (data && data.features) {
+        // Discard unnecessary properties and only keep the polygon + city join key
+        const cleanedFeatures = data.features.map((feature: any) => {
+          const cityName = feature.properties?.varos;
+          const cityData = aggregatedByCity[cityName];
+
+          return {
+            ...feature,
+            properties: {
+              varos: cityName,
+              count: cityData?.count || 0,
+              osszeg: cityData?.osszeg || 0,
+              // Keep megye just for display if available
+              megye: feature.properties?.megye || '',
+            }
+          };
+        });
+        setGeoData({ ...data, features: cleanedFeatures });
+      }
     });
-  }, []);
+  }, [aggregatedByCity]);
 
   const getFeatureStyle = (feature: any) => {
-    const cityName = feature?.properties?.varos;
-    const cityData = aggregatedByCity[cityName];
-    const count = cityData?.count || 0;
+    const count = feature.properties?.count || 0;
+    const cityName = feature.properties?.varos;
 
     return {
       fillColor: getColor(count),
       weight: selectedCity === cityName ? 2 : 1,
       opacity: 1,
       color: selectedCity === cityName ? '#fbbf24' : '#4b5563',
-      fillOpacity: count > 0 ? 0.7 : 0.2,
+      fillOpacity: count > 0 ? 0.7 : 0.1,
     };
   };
 
   const onEachFeature = (feature: any, layer: L.Layer) => {
-    const cityName = feature?.properties?.varos;
-    const megye = feature?.properties?.megye;
-    const cityData = aggregatedByCity[cityName];
-    
+    const props = feature.properties;
+    const cityName = props.varos;
+    const count = props.count;
+    const osszeg = props.osszeg;
+
     layer.on({
       mouseover: (e) => {
         const target = e.target;
@@ -90,17 +108,19 @@ export function ProjectMap({ projects, aggregatedByCity }: ProjectMapProps) {
       },
     });
 
-    if (cityData && cityData.count > 0) {
+    if (count > 0) {
       layer.bindPopup(`
         <div class="p-2">
           <h3 class="font-semibold text-base">${cityName}</h3>
-          <p class="text-sm text-gray-400">${megye}</p>
+          <p class="text-sm text-gray-400">${props.megye}</p>
           <div class="mt-2 space-y-1">
-            <p class="text-sm"><span class="text-gray-400">Projektek:</span> <strong>${cityData.count}</strong></p>
-            <p class="text-sm"><span class="text-gray-400">Támogatás:</span> <strong>${formatCurrency(cityData.osszeg)}</strong></p>
+            <p class="text-sm"><span class="text-gray-400">Projektek:</span> <strong>${count.toLocaleString('hu-HU')}</strong></p>
+            <p class="text-sm"><span class="text-gray-400">Támogatás:</span> <strong>${formatCurrency(osszeg)}</strong></p>
           </div>
         </div>
-      `);
+      `, {
+        className: 'custom-popup'
+      });
     }
   };
 
@@ -130,7 +150,7 @@ export function ProjectMap({ projects, aggregatedByCity }: ProjectMapProps) {
             />
           )}
         </MapContainer>
-        
+
         {/* Legend */}
         <div className="absolute bottom-4 left-4 z-[1000] rounded-lg border border-border bg-card/95 p-3 backdrop-blur">
           <p className="mb-2 text-xs font-medium text-muted-foreground">Projektek száma</p>

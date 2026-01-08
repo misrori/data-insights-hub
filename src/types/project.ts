@@ -9,6 +9,8 @@ export interface Project {
   tamogatas: number;
   palyazati_dontes: string;
   palyazat_targya: string;
+  megye?: string;
+  regio?: string;
 }
 
 export interface FilterState {
@@ -19,6 +21,15 @@ export interface FilterState {
   szervezet_tipusa: string[];
   minOsszeg: number;
   maxOsszeg: number;
+  groupBy?: 'none' | 'szervezet' | 'varos' | 'besorolas' | 'szervezet_tipusa' | 'dontes';
+}
+
+export interface GroupedProject {
+  id: string; // unique key for the group
+  name: string;
+  adoszama?: string;
+  count: number;
+  tamogatas: number;
 }
 
 export interface AggregatedData {

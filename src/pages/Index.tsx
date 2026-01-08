@@ -26,6 +26,7 @@ export default function Index() {
     resetFilters,
     aggregatedData,
     uniqueValues,
+    groupedProjects,
   } = useProjectData();
 
   if (loading) {
@@ -135,7 +136,11 @@ export default function Index() {
         {/* Projects Table */}
         <div>
           <h2 className="mb-4 font-display text-xl font-semibold">Pályázatok</h2>
-          <ProjectTable projects={filteredProjects} maxRows={20} />
+          <ProjectTable
+            projects={filteredProjects}
+            groupedProjects={groupedProjects}
+            maxRows={20}
+          />
         </div>
       </div>
     </Layout>

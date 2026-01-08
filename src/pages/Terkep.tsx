@@ -9,26 +9,13 @@ export default function Terkep() {
   const {
     filteredProjects,
     loading,
+    aggregatedData,
     filters,
     updateFilter,
     resetFilters,
     uniqueValues,
+    groupedProjects,
   } = useProjectData();
-
-  const aggregatedByCity = useMemo(() => {
-    const result: Record<string, { count: number; osszeg: number }> = {};
-    
-    filteredProjects.forEach(project => {
-      const city = project.szekhely_varos;
-      if (!result[city]) {
-        result[city] = { count: 0, osszeg: 0 };
-      }
-      result[city].count++;
-      result[city].osszeg += project.tamogatas;
-    });
-    
-    return result;
-  }, [filteredProjects]);
 
   if (loading) {
     return (
@@ -60,11 +47,12 @@ export default function Terkep() {
           uniqueValues={uniqueValues}
           onUpdateFilter={updateFilter}
           onResetFilters={resetFilters}
+          showGrouping={false}
         />
 
-        <ProjectMap 
-          projects={filteredProjects} 
-          aggregatedByCity={aggregatedByCity}
+        <ProjectMap
+          projects={filteredProjects}
+          aggregatedByCity={aggregatedData.varosokSzerint}
         />
       </div>
     </Layout>

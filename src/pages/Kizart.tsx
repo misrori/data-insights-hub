@@ -13,15 +13,10 @@ export default function Kizart() {
     updateFilter,
     resetFilters,
     uniqueValues,
-  } = useProjectData();
-
-  const elutasitottProjects = useMemo(() => 
-    filteredProjects.filter(p => {
-      const dontes = p.palyazati_dontes.toLowerCase();
-      return dontes === 'elutasított' || dontes === 'nem támogatott' || dontes === 'érvénytelen';
-    }),
-    [filteredProjects]
-  );
+    groupedProjects,
+  } = useProjectData({
+    dontes: ['Elutasított', 'Nem támogatott', 'Érvénytelen']
+  });
 
   if (loading) {
     return (
@@ -43,7 +38,7 @@ export default function Kizart() {
           <div>
             <h1 className="font-display text-2xl font-bold">Elutasított pályázatok</h1>
             <p className="text-muted-foreground">
-              {elutasitottProjects.length.toLocaleString('hu-HU')} elutasított/érvénytelen pályázat
+              {filteredProjects.length.toLocaleString('hu-HU')} elutasított/érvénytelen pályázat
             </p>
           </div>
         </div>
@@ -55,7 +50,10 @@ export default function Kizart() {
           onResetFilters={resetFilters}
         />
 
-        <ProjectTable projects={elutasitottProjects} />
+        <ProjectTable
+          projects={filteredProjects}
+          groupedProjects={groupedProjects}
+        />
       </div>
     </Layout>
   );
